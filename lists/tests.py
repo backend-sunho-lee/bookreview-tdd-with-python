@@ -21,23 +21,30 @@ class NewListTest(TestCase):
         response = self.client.post('/lists/new',
                                     data={'item_text': '신규 작업 아이템'})
 
-        self.assertRedirects(response, '/lists/the-only-list-in-the-world/')
+        new_list = List.objects.first()
+        self.assertRedirects(response, '/lists/{}/'.format(new_list.id,))
 
 
 class LiveViewTest(TestCase):
     def test_uses_list_template(self):
-        response = self.client.get('/lists/the-only-list-in-the-world/')
+        list_ = List.objects.create()
+        response = self.client.get('/lists/{}/'.format(list_.id,))
         self.assertTemplateUsed(response, 'list.html')
 
-    def test_display_all_items(self):
-        list_ = List.objects.create()
-        Item.objects.create(text='itemey 1', list=list_)
-        Item.objects.create(text='itemey 2', list=list_)
+    def test_displays_only_items_for_that_list(self):
+        correct_list = List.objects.create()
+        Item.objects.create(text='itemey 1', list=correct_list)
+        Item.objects.create(text='itemey 2', list=correct_list)
+        other_list = List.objects.create()
+        Item.objects.create(text='another itemey 1', list=other_list)
+        Item.objects.create(text='another itemey 2', list=other_list)
 
-        response = self.client.get('/lists/the-only-list-in-the-world/')
+        response = self.client.get('/lists/{}/'.format(correct_list.id,))
 
         self.assertContains(response, 'itemey 1')
         self.assertContains(response, 'itemey 2')
+        self.assertNotContains(response, 'another itemey 1')
+        self.assertNotContains(response, 'another itemey 2')
 
 
 class HomePageTest(TestCase):
